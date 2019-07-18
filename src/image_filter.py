@@ -4,8 +4,11 @@ import os
 
 inputDir = '/mock/'
 outputDir = '/out/'
-fileName = 'xander2.jpg'
+fileName = 'junction.jpg'
 failed = False
+
+if(sys.argv[1]):
+    fileName = sys.argv[1]
 
 def process(fileName, inputDir, outputDir):
     # We need an absolute path
