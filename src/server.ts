@@ -1,28 +1,12 @@
 import express from 'express';
-import fs from "fs";
 import {Request, Response} from "express";
 import bodyParser from 'body-parser';
 import { spawn } from 'child_process';
-import https from "https";
-import validator from "validator";
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 (async () => {
 
   const app = express();
   const port = 8082; // default port to listen
-  const getImageName = (url:string) => {
-    let pictures = url.split("/").filter((d) => {
-      return d.includes(".jpg") || d.includes(".jpeg") || d.includes(".png"); 
-    })
-    if(pictures.length !== 1){
-      throw new Error("No image in the URL");
-    }
-    else if(pictures[0].includes("?")){
-       pictures = pictures[0].split("?")
-    }
-    return pictures[0];
-  }
-  
   app.use(bodyParser.json());
   
   //VERY BAD
@@ -33,22 +17,12 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   });
 
   app.post("/filterimage", async (req: Request, res: Response) => {
-    const {image_url, upload_image_signedUrl} = req.body;
+    const {image_url} = req.body;
     if(!image_url){
       return res.send(`image_url must be provided`).status(422);
     }
-    if(!validator.isURL(image_url)){
-      res.send(`image_url is not a valid URL`)
-    }
-
-    if(upload_image_signedUrl !== undefined){
-      if(!validator.isURL(upload_image_signedUrl)){
-        return res.send(`upload_image_signedUrl is not a valid URL`)
-      }
-    }
     try{
       let file = await filterImageFromURL(image_url);
-      console.log(file)
       res.on("finish", ()=>{
         deleteLocalFiles([file])
       })
@@ -57,16 +31,11 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
             pythonProcess.stdout.on('data', (data) => {
             const check = data.toString().split("\n");  
             if(check[0] === "True" && check[1] === "Success"){
-              if(upload_image_signedUrl){
                 return res.sendFile(`${file}`);
-              }
-              return res.send("File successfully processed").status(200);
             }
             res.send("Failed to process image").status(422); 
     });
   }
-  
-        
     }catch(e){
       return res.send(e.message).status(422);
     }
@@ -82,11 +51,9 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
         console.log(data.toString())
       });
     }
-
     res.send( "pythonic" );
-  } );
+  });
   
-
   // Start the Server
   app.listen( port, () => {
       console.log( `server running http://localhost:${ port }` );
