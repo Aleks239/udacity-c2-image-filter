@@ -21,7 +21,7 @@ export async function filterImageFromURL(inputURL: string): Promise<string>{
                 resolve(__dirname+outpath);
             });
         }catch(e){
-            reject(e);
+            reject(new Error(`Failed to extract image from URL : ${e.message}`));
         }
        
     });
