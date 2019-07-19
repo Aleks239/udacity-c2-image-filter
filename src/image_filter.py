@@ -15,7 +15,7 @@ def process(fileName, inputDir, outputDir):
     dir_path = os.path.dirname(os.path.realpath(__file__))
 
     # Load the image from disk
-    img = cv2.imread(dir_path+inputDir+fileName,0)
+    img = cv2.imread(fileName,0)
     if img is None:
         return False, "Image Failed to Load"
 
@@ -26,7 +26,7 @@ def process(fileName, inputDir, outputDir):
 
 
     # Write the image back to disk
-    out = cv2.imwrite(dir_path+outputDir+fileName, filtered)
+    out = cv2.imwrite(fileName, filtered)
     if out == False:
         return False, "Image Failed To Write"
 

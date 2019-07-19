@@ -5,6 +5,7 @@ import bodyParser from 'body-parser';
 import { spawn } from 'child_process';
 import https from "https";
 import validator from "validator";
+import {filterImageFromURL, deleteLocalFiles} from './util/util';
 (async () => {
 
   const app = express();
@@ -33,15 +34,6 @@ import validator from "validator";
 
   app.post("/filterimage", async (req: Request, res: Response) => {
     const {image_url, upload_image_signedUrl} = req.body;
-    let fileName = "";
-    try{
-       fileName = getImageName(image_url);       
-    }catch(e){
-      return res.send(e.message).status(422);
-    }
-    
-    const localPath = `/mock/${fileName}`
-    const processedPath = `/out/${fileName}`
     if(!image_url){
       return res.send(`image_url must be provided`).status(422);
     }
@@ -54,30 +46,32 @@ import validator from "validator";
         return res.send(`upload_image_signedUrl is not a valid URL`)
       }
     }
-
-    const file = fs.createWriteStream(__dirname + localPath);
-    const request = https.get(image_url, function(response) {
-        response.pipe(file)
-        response.on("end", () => {
-          const pythonProcess = spawn('python3', ["src/image_filter.py", `${fileName}`]);
-          if(pythonProcess !== undefined) {
-              pythonProcess.stdout.on('data', (data) => {
-              const check = data.toString().split("\n");  
-              if(check[0] === "True" && check[1] === "Success"){
-                if(upload_image_signedUrl){
-                  return res.sendFile(`${__dirname}/${processedPath}`);
-                }
-                return res.send("File successfully processed").status(200);
+    try{
+      let file = await filterImageFromURL(image_url);
+      console.log(file)
+      res.on("finish", ()=>{
+        deleteLocalFiles([file])
+      })
+      const pythonProcess = spawn('python3', ["src/image_filter.py", `${file}`]);
+        if(pythonProcess !== undefined) {
+            pythonProcess.stdout.on('data', (data) => {
+            const check = data.toString().split("\n");  
+            if(check[0] === "True" && check[1] === "Success"){
+              if(upload_image_signedUrl){
+                return res.sendFile(`${file}`);
               }
-              res.send("Failed to process image").status(422);
-              
-      });
+              return res.send("File successfully processed").status(200);
+            }
+            res.send("Failed to process image").status(422); 
+    });
+  }
+  
+        
+    }catch(e){
+      return res.send(e.message).status(422);
     }
-        })
-
   })
-    
-  })
+  
 
   // Root URI call
   app.get( "/", async ( req, res ) => {
